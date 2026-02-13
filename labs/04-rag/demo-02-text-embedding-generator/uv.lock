@@ -175,7 +175,7 @@ wheels = [
 ]
 
 [[package]]
-name = "demo-2"
+name = "demo-02-text-embedding-generator"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

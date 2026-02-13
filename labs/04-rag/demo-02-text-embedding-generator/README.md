@@ -18,20 +18,11 @@ To demonstrate the text embedding generation workflow:
 demo-2-text-embedding-generator/
 ├── .env                    # Environment variables (OpenAI API key)
 ├── .env.example            # Environment template
-├── main/
-│   ├── __init__.py
-│   ├── generate_embeddings.py    # Core embedding functions (get_embedding, cosine_similarity)
-│   └── main.py                   # Main execution script with test examples
-├── test/
-│   ├── __init__.py               # Test package initialization
-│   ├── conftest.py               # Pytest configuration and fixtures
-│   ├── test_generate_embeddings.py  # Test suite for embedding functions
-│   └── README.md                 # Test documentation
-├── pytest.ini                    # Pytest configuration
-├── pyproject.toml                # UV dependency configuration
-├── uv.lock                       # Dependency lock file
-├── README.md                     # This file
-└── .python-version               # Python version specification
+├── main.py                 # Single consolidated module with all functionality
+├── pyproject.toml          # UV dependency configuration
+├── uv.lock                 # Dependency lock file
+├── README.md               # This file
+└── .python-version         # Python version specification
 ```
 
 ## Setup Instructions
@@ -57,15 +48,13 @@ demo-2-text-embedding-generator/
 
    ```bash
    # Run the main script with example sentences
-   uv run python main/main.py
+   uv run python main.py
 
    # Or run as module
-   uv run python -m main.main
+   uv run python -m main
    ```
 
    The script will process sample sentences and display embedding statistics and similarity scores.
-
-   **Note:** The core embedding functions are in `main/generate_embeddings.py` and can be imported for use in other projects.
 
 ## Features
 
@@ -77,6 +66,7 @@ demo-2-text-embedding-generator/
 - ✅ **Environment-Based Configuration**: Secure API key management via `.env` file
 - ✅ **OpenAI Integration**: Uses LangChain's OpenAIEmbeddings for embedding generation
 - ✅ **Type Safety**: Proper type hints and validation throughout
+- ✅ **Single File Architecture**: All functionality in one consolidated, easy-to-understand module
 
 ## Usage
 
@@ -85,7 +75,7 @@ demo-2-text-embedding-generator/
 Run the script to generate embeddings and calculate similarities:
 
 ```bash
-uv run python main/main.py
+uv run python main.py
 ```
 
 ### Programmatic Usage
@@ -93,7 +83,7 @@ uv run python main/main.py
 #### Generate Embeddings
 
 ```python
-from main.generate_embeddings import get_embedding, cosine_similarity
+from main import get_embedding, cosine_similarity
 
 # Generate embedding for a single text
 embedding = get_embedding("Artificial intelligence is transforming industries")
@@ -103,7 +93,7 @@ print(f"Embedding dimensions: {len(embedding)}")
 #### Calculate Similarity
 
 ```python
-from main.generate_embeddings import get_embedding, cosine_similarity
+from main import get_embedding, cosine_similarity
 
 # Calculate similarity between two texts
 text1 = "Artificial intelligence is transforming industries"
@@ -173,38 +163,3 @@ Try different inputs to see how semantic similarity works:
 | "AI transforms industries" vs "ML revolutionizes business" | 0.85+               | High similarity (same domain)     |
 | "AI transforms industries" vs "Pizza is delicious"         | 0.10-0.30           | Low similarity (unrelated)        |
 | "Dogs are loyal" vs "Cats are independent"                 | 0.50-0.70           | Medium similarity (same category) |
-
-## Testing
-
-The project includes comprehensive test suites for all components:
-
-### Running Tests
-
-Run all tests:
-
-```bash
-uv run pytest
-```
-
-Run specific test file:
-
-```bash
-uv run pytest test/test_generate_embeddings.py
-```
-
-Run with coverage:
-
-```bash
-uv run pytest --cov=main --cov-report=html
-```
-
-### Test Coverage
-
-The test suite covers:
-
-- ✅ Cosine similarity function tests (identical, orthogonal, opposite vectors)
-- ✅ Embedding generation tests (successful generation, input validation)
-- ✅ Error handling tests (empty inputs, API failures)
-- ✅ Integration tests (complete workflow)
-
-For more details, see `test/README.md`.
