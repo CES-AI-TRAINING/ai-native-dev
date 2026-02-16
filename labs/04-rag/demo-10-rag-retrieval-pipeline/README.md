@@ -1,69 +1,88 @@
 # Demo 10: RAG Retrieval Pipeline
 
-This demo focuses on the **RETRIEVAL phase** of RAG (Retrieval-Augmented Generation). It demonstrates various retrieval strategies and scenarios for finding the most relevant information from a vector database.
+This demo focuses **PURELY on the RETRIEVAL phase** by connecting to an **EXISTING vector database** and demonstrating various retrieval strategies with detailed chunk content display.
 
 ## What This Demo Covers
 
-**Focus**: Understanding retrieval quality and strategies  
-**Does NOT include**: LLM-based answer generation
+**Prerequisites**: Run **demo-09-rag-ingestion-pipeline** first to ingest documents  
+**Focus**: Connect to existing vector store and demonstrate retrieval strategies  
+**Does NOT include**:
 
-For complete RAG with generation, see **demo-11-complete-rag-pipeline**.
+- Document ingestion (see demo-09)
+- LLM-based answer generation (see demo-11)
+
+**Key Feature**: Shows 200 characters of content for each retrieved chunk!
 
 ## What is RAG Retrieval?
 
-RAG retrieval is the process of finding the most relevant pieces of information from a knowledge base to answer a query. It's the foundation of RAG systems.
+RAG retrieval is the process of finding the most relevant pieces of information from a knowledge base to answer a query. This demo connects to an **existing vector database** (populated by demo-09) and demonstrates various retrieval strategies.
 
-### Retrieval Workflow
+### Workflow
 
 ```
-1. INGESTION PHASE (Setup)
+PREREQUISITE: Run demo-09 first to populate vector database
    ┌─────────────┐
-   │  Documents  │ → Load documents
+   │  Documents  │ → (Already ingested by demo-09)
    └─────────────┘
           ↓
    ┌─────────────┐
-   │   Chunks    │ → Split into pieces
+   │  Chunks     │ → (Already in vector DB)
    └─────────────┘
           ↓
    ┌─────────────┐
-   │ Embeddings  │ → Generate vectors
+   │ Embeddings  │ → (Already generated)
    └─────────────┘
           ↓
    ┌─────────────┐
-   │ Vector DB   │ → Store for search
+   │ Vector DB   │ → (ChromaDB or Pinecone)
    └─────────────┘
 
-2. RETRIEVAL PHASE (Query Time)
+THIS DEMO: Connect & Retrieve
+   ┌─────────────┐
+   │   Connect   │ → Connect to existing vector DB
+   └─────────────┘
+          ↓
+   ┌─────────────┐
+   │   Verify    │ → Ensure data exists
+   └─────────────┘
+          ↓
    ┌─────────────┐
    │   Query     │ → User's question
    └─────────────┘
           ↓
    ┌─────────────┐
-   │  Embedding  │ → Convert to vector
+   │   Search    │ → Find similar chunks (6 strategies)
    └─────────────┘
           ↓
    ┌─────────────┐
-   │   Search    │ → Find similar chunks
-   └─────────────┘
-          ↓
-   ┌─────────────┐
-   │  Results    │ → Relevant documents
+   │  Results    │ → Show detailed chunks (200 chars each)
    └─────────────┘
 ```
 
 ## Key Features
 
-✅ **Retrieval-Focused** - Deep dive into retrieval strategies  
-✅ **Multiple Scenarios** - 6 different retrieval demonstrations  
+✅ **Retrieval-Only** - Connects to existing vector database  
+✅ **No Ingestion** - Assumes demo-09 already ran  
+✅ **Multiple Scenarios** - 7 different retrieval demonstrations  
+✅ **Detailed Output** - Shows 200 characters of each chunk  
 ✅ **Quality Analysis** - Compare results across k values  
 ✅ **Config-Driven** - Switch between ChromaDB and Pinecone  
 ✅ **Single File** - All code in main.py (~450 lines)  
-✅ **Clear Output** - Detailed console output for each strategy  
-✅ **Standard OpenAI** - No Azure required
+✅ **Clear Output** - Relevance indicators (🟢🟡🔴)  
+✅ **Standard OpenAI** - Only embeddings needed
 
-## Retrieval Strategies Demonstrated
+## Prerequisites
 
-### 1. Basic Similarity Search
+**IMPORTANT**: You must run **demo-09-rag-ingestion-pipeline** first!
+
+Demo-09 will:
+
+- Load your documents (PDF, text, web)
+- Chunk them into pieces
+- Generate embeddings
+- Store in vector database (ChromaDB or Pinecone)
+
+Then this demo (demo-10) will connect to that populated vector store and demonstrate retrieval strategies.
 
 Find top-k most similar documents:
 
@@ -77,8 +96,18 @@ Get relevance scores for each result:
 
 ```python
 results = vectorstore.similarity_search_with_score(query, k=3)
-# Returns: [(doc, 0.8542), (doc, 0.7234), ...]
+# Returns: [(doc, 0.5234), (doc, 0.7456), ...]
 ```
+
+**Understanding Scores** (Distance-Based Metric):
+- **Lower score = More relevant** (closer in vector space)
+- **Higher score = Less relevant** (farther in vector space)
+- Visual indicators:
+  - 🟢 **< 0.6**: High relevance (close distance)
+  - 🟡 **0.6-0.8**: Medium relevance
+  - 🔴 **> 0.8**: Low relevance (far distance)
+
+**Note**: These are distance scores, not similarity percentages. A score of 0.3 is better than 0.9!
 
 ### 3. MMR (Maximum Marginal Relevance)
 
@@ -104,9 +133,17 @@ results = retriever.invoke(query)
 
 ### 5. Metadata Filtering
 
-Filter results by document properties:
+Filter results by document properties (source, page, type, etc.):
 
 ```python
+# Filter by specific document source
+results = vectorstore.similarity_search(
+    query, 
+    k=3,
+    filter={'source': 'company_policy.pdf'}
+)
+
+# Or use retriever interface
 retriever = vectorstore.as_retriever(
     search_kwargs={
         "k": 3,
@@ -114,6 +151,16 @@ retriever = vectorstore.as_retriever(
     }
 )
 ```
+
+**Common Filter Examples**:
+- `{'source': 'file.pdf'}` - Specific document
+- `{'page': 5}` - Specific page
+- `{'type': 'policy'}` - Document category
+
+**Benefits**:
+- Limit results to specific documents
+- Search within document subsets
+- Combine semantic search with structured filtering
 
 ### 6. Quality Analysis
 
@@ -175,21 +222,33 @@ PINECONE_REGION=us-east-1
 
 ## Usage
 
-Run the demonstration:
+**Step 1**: First run demo-09 to ingest documents:
 
 ```bash
+cd ../demo-09-rag-ingestion-pipeline
 uv run python main.py
+# This will populate the vector database
+```
+
+**Step 2**: Then run this demo to demonstrate retrieval:
+
+```bash
+cd ../demo-10-rag-retrieval-pipeline
+uv run python main.py
+# This will connect and show retrieval strategies
 ```
 
 ## What the Demo Does
 
-### Phase 1: Ingestion
+### Phase 1: Connect & Verify
 
-1. **Load Documents** - PDF, text files, web pages
-2. **Chunk Documents** - Split into 1000-char chunks with 200-char overlap
-3. **Store with Embeddings** - Generate vectors and store in vector DB
+1. **Connect to Vector Store** - ChromaDB or Pinecone (config-driven)
+2. **Verify Data Exists** - Checks if documents were ingested (by demo-09)
+3. **Show Sample** - Displays a sample chunk to confirm connection
 
-### Phase 2: Retrieval Demonstrations
+⚠️ **If vector store is empty**: Demo will guide you to run demo-09 first.
+
+### Phase 2: Retrieval Demonstrations (7 Scenarios)
 
 #### Scenario 1: Different K Values
 
@@ -211,16 +270,42 @@ Query: "What are the key policies?"
 
 #### Scenario 2: Relevance Scores
 
-See how relevant each result is:
+See how relevant each result is with visual indicators (distance-based scores):
+
+**Note**: Lower score = Higher relevance (closer in vector space)
 
 ```
 Query: "remote work guidelines"
+  (Lower score = Higher relevance)
 
 ✓ Retrieved 3 documents with scores
-  [1] Score: 0.8542 | Documents/company_policy.pdf...
-  [2] Score: 0.7234 | Documents/guidelines.txt...
-  [3] Score: 0.6891 | Documents/policy.txt...
+
+  [1] Score: 0.5234 🟢 High relevance (close distance)
+      Source: Documents/company_policy.pdf
+      Page: 3
+      Content: Remote Work Policy  All employees are eligible for remote
+               work arrangements up to 3 days per week. Requests must be
+               submitted through the HR portal at least one week in advance...
+      Length: 892 characters
+
+  [2] Score: 0.6891 🟡 Medium relevance
+      Source: Documents/guidelines.txt
+      Content: Work from home guidelines require maintaining regular
+               communication with team members during designated work hours.
+               All remote workers must be available for video calls...
+      Length: 654 characters
+
+  [3] Score: 0.8234 🔴 Low relevance (far distance)
+      Source: Documents/policy.txt
+      Content: General company policies apply to all employees regardless
+               of work location...
+      Length: 423 characters
 ```
+
+**Score Interpretation**:
+- Scores represent **distance** in vector space (Euclidean/Cosine)
+- **Lower scores are better** - they indicate semantic closeness
+- Example: 0.3 is MORE relevant than 0.9
 
 #### Scenario 3: MMR Search
 
@@ -271,7 +356,45 @@ Query: "What are the guidelines?"
   Bottom result score: 0.6891
 ```
 
-#### Scenario 6: Document Inspection
+#### Scenario 6: Metadata Filtering
+
+Filter results by document source or other metadata:
+
+```
+Query: "What are the guidelines?"
+Filter: {'source': 'Documents/guidelines.txt'}
+  (Only returns results matching metadata criteria)
+
+✓ Retrieved 3 documents matching filter
+
+  [1] Metadata:
+      source: Documents/guidelines.txt
+      Content: All employees must follow established guidelines for code
+               reviews, including mandatory peer review for all pull requests,
+               automated testing requirements, and documentation standards...
+      Length: 745 characters
+
+  [2] Metadata:
+      source: Documents/guidelines.txt
+      Content: Development guidelines require following PEP 8 for Python code,
+               using type hints for all function signatures, maintaining test
+               coverage above 80%, and writing clear commit messages...
+      Length: 612 characters
+
+  [3] Metadata:
+      source: Documents/guidelines.txt
+      Content: Security guidelines mandate code scanning before deployment,
+               regular dependency updates, API key rotation, and security
+               audit participation for all team members...
+      Length: 523 characters
+```
+
+**Use Cases**:
+- Search only within specific documents
+- Filter by document type, page number, or custom metadata
+- Combine semantic search with structured filtering
+
+#### Scenario 7: Document Inspection
 
 Deep dive into a retrieved document:
 
@@ -294,39 +417,39 @@ DOCUMENT #1 DETAILS
 
 ## Understanding the Output
 
-### Ingestion Phase
+### Phase 1: Verification
 
 ```
 ======================================================================
-STEP 1: LOADING DOCUMENTS
+RAG RETRIEVAL PIPELINE - CONNECT TO EXISTING VECTOR STORE
 ======================================================================
-[1.1] Loading PDF...
-  ✓ Loaded 5 page(s) from PDF
-[1.2] Loading text files...
-  ✓ Loaded: guidelines.txt
-  ✓ Loaded: policy.txt
-[1.3] Loading web page...
-  ✓ Loaded web page
-✓ Total documents loaded: 8
+Vector Database: CHROMADB
+Chunk Preview Length: 200 characters
+
+⚠️  Prerequisites: Run demo-09 first to ingest documents!
+======================================================================
+
+✓ OpenAI embeddings initialized: text-embedding-3-small
+✓ ChromaDB initialized
+  - Storage: ./chroma_db
+  - Collection: company_policies
+✓ Vector store ready!
 
 ======================================================================
-STEP 2: CHUNKING DOCUMENTS
+VERIFYING VECTOR STORE DATA
 ======================================================================
-✓ Created 127 chunks
-  - Average length: 847 characters
-  - Min length: 234 characters
-  - Max length: 1000 characters
 
-======================================================================
-STEP 3: STORE CHUNKS WITH EMBEDDINGS
-======================================================================
-🔄 Processing 127 chunks...
-  - Generating embeddings with OpenAI
-  - Storing in CHROMADB
-✓ Successfully stored 127 chunks with embeddings!
+✓ Vector store has data!
+  - Found at least 127 chunks
+  - Ready for retrieval demonstrations
+
+📄 Sample chunk:
+  Source: Documents/company_policy.pdf
+  Content: Employee Handbook Introduction  This handbook outlines the
+           key policies and procedures for all employees...
 ```
 
-### Retrieval Phase
+### Phase 2: Retrieval Demonstrations
 
 ```
 ======================================================================
@@ -335,11 +458,26 @@ DEMONSTRATING RETRIEVAL SCENARIOS
 
 [Scenario 1] Comparing Different K Values
 ----------------------------------------------------------------------
+
 [Retrieval] Similarity Search (k=2)
 Query: "What are the key policies?"
+----------------------------------------------------------------------
+
 ✓ Retrieved 2 documents
-  [1] Documents/company_policy.pdf...
-  [2] Documents/guidelines.txt...
+
+  [1] Metadata:
+      Source: Documents/company_policy.pdf
+      Page: 1
+      Content: Company Policies Overview  The following policies apply to
+               all employees. Please review carefully and direct questions
+               to your supervisor or HR department. Key areas include...
+      Length: 956 characters
+
+  [2] Metadata:
+      Source: Documents/guidelines.txt
+      Content: General Guidelines  All employees must adhere to these
+               guidelines for professional conduct and workplace safety...
+      Length: 742 characters
 ```
 
 ## Key Concepts Explained
@@ -423,7 +561,7 @@ LangChain abstraction for consistent retrieval across different vector stores.
 - display_document_details()
 
 # Demonstration: demonstrate_retrieval_scenarios()
-- Run 6 different scenarios
+- Run 7 different scenarios
 - Show various retrieval strategies
 ```
 

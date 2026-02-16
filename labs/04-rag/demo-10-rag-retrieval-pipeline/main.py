@@ -1,20 +1,29 @@
 """
 Demo 10: RAG Retrieval Pipeline
 
-This demo focuses on the RETRIEVAL phase of RAG:
-1. Load documents from multiple sources
-2. Chunk documents
-3. Generate embeddings and store in vector database
-4. Demonstrate various retrieval strategies and scenarios
+This demo focuses PURELY on the RETRIEVAL phase of RAG by connecting to an 
+EXISTING vector database and demonstrating various retrieval strategies.
 
-Focus: Understanding retrieval quality, not answer generation
-(For complete RAG with generation, see demo-11)
+Prerequisites:
+    - Run demo-09 first to ingest documents into vector database
+    - Ensure vector database (ChromaDB or Pinecone) has data
+
+What this demo does:
+    1. Connect to existing vector database
+    2. Verify data exists
+    3. Demonstrate 6 retrieval strategies with detailed output
+    4. Show chunk content (100-200 chars) for each result
+    5. Compare retrieval quality across different approaches
+
+Focus: Understanding retrieval strategies and quality analysis
+(For ingestion, see demo-09. For complete RAG with generation, see demo-11)
 
 Supports two vector databases via configuration:
 - ChromaDB (local, file-based)
 - Pinecone (cloud-based)
 
 Usage:
+    # After running demo-09 to ingest data:
     # Set VECTOR_DB=chromadb or pinecone in .env
     uv run python main.py
 """
@@ -25,8 +34,6 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 # LangChain imports
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, WebBaseLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 
@@ -42,21 +49,15 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
 
-# Document source configuration
-DOCS_DIR = Path("Documents")
-PDF_FILE = DOCS_DIR / "company_policy.pdf"
-WEB_URL = "https://www.python.org/"
-
-# Chunking configuration
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
+# Retrieval display configuration
+CHUNK_PREVIEW_LENGTH = 200  # Show 200 chars of each retrieved chunk
 
 print("=" * 70)
-print("RAG RETRIEVAL PIPELINE CONFIGURATION")
+print("RAG RETRIEVAL PIPELINE - CONNECT TO EXISTING VECTOR STORE")
 print("=" * 70)
 print(f"Vector Database: {VECTOR_DB.upper()}")
-print(f"Chunk Size: {CHUNK_SIZE} characters")
-print(f"Chunk Overlap: {CHUNK_OVERLAP} characters")
+print(f"Chunk Preview Length: {CHUNK_PREVIEW_LENGTH} characters")
+print("\n⚠️  Prerequisites: Run demo-09 first to ingest documents!")
 print("=" * 70)
 
 # ============================================================================
@@ -131,116 +132,52 @@ print(f"✓ Vector store ready!\n")
 
 
 # ============================================================================
-# STEP 1: LOAD DOCUMENTS
+# VERIFY VECTOR STORE HAS DATA
 # ============================================================================
-def load_documents() -> List[Document]:
-    """Load documents from PDF, text files, and web."""
+def verify_vector_store() -> int:
+    """Verify that vector store has data and return document count."""
     print("=" * 70)
-    print("STEP 1: LOADING DOCUMENTS")
+    print("VERIFYING VECTOR STORE DATA")
     print("=" * 70)
-    
-    all_docs = []
-    
-    # Load PDF
-    print("\n[1.1] Loading PDF...")
-    if PDF_FILE.exists():
-        try:
-            pdf_loader = PyPDFLoader(str(PDF_FILE))
-            pdf_docs = pdf_loader.load()
-            all_docs.extend(pdf_docs)
-            print(f"  ✓ Loaded {len(pdf_docs)} page(s) from PDF")
-        except Exception as e:
-            print(f"  ✗ Error loading PDF: {e}")
-    else:
-        print(f"  ⚠️  PDF not found: {PDF_FILE}")
-    
-    # Load text files
-    print("\n[1.2] Loading text files...")
-    txt_files = list(DOCS_DIR.glob("*.txt"))
-    if txt_files:
-        for txt_file in txt_files:
-            try:
-                text_loader = TextLoader(str(txt_file), encoding="utf-8")
-                text_docs = text_loader.load()
-                all_docs.extend(text_docs)
-                print(f"  ✓ Loaded: {txt_file.name}")
-            except Exception as e:
-                print(f"  ✗ Error loading {txt_file.name}: {e}")
-    else:
-        print("  ⚠️  No .txt files found")
-    
-    # Load web page
-    print("\n[1.3] Loading web page...")
-    try:
-        web_loader = WebBaseLoader(WEB_URL)
-        web_docs = web_loader.load()
-        all_docs.extend(web_docs)
-        print(f"  ✓ Loaded web page")
-        print(f"  ✓ Content length: {len(web_docs[0].page_content):,} characters")
-    except Exception as e:
-        print(f"  ✗ Error loading web page: {e}")
-    
-    print(f"\n✓ Total documents loaded: {len(all_docs)}")
-    return all_docs
-
-
-# ============================================================================
-# STEP 2: CHUNK DOCUMENTS
-# ============================================================================
-def chunk_documents(documents: List[Document]) -> List[Document]:
-    """Split documents into smaller chunks."""
-    print("\n" + "=" * 70)
-    print("STEP 2: CHUNKING DOCUMENTS")
-    print("=" * 70)
-    
-    if not documents:
-        print("⚠️  No documents to chunk!")
-        return []
-    
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-        length_function=len,
-        separators=["\n\n", "\n", " ", ""]
-    )
-    
-    chunks = text_splitter.split_documents(documents)
-    
-    # Calculate statistics
-    chunk_lengths = [len(chunk.page_content) for chunk in chunks]
-    avg_length = sum(chunk_lengths) / len(chunk_lengths) if chunk_lengths else 0
-    
-    print(f"\n✓ Created {len(chunks)} chunks")
-    print(f"  - Average length: {avg_length:.0f} characters")
-    print(f"  - Min length: {min(chunk_lengths) if chunk_lengths else 0} characters")
-    print(f"  - Max length: {max(chunk_lengths) if chunk_lengths else 0} characters")
-    
-    return chunks
-
-
-# ============================================================================
-# STEP 3: STORE CHUNKS IN VECTOR DATABASE
-# ============================================================================
-def store_chunks(chunks: List[Document]) -> None:
-    """Generate embeddings and store chunks in vector database."""
-    print("\n" + "=" * 70)
-    print("STEP 3: STORE CHUNKS WITH EMBEDDINGS")
-    print("=" * 70)
-    
-    if not chunks:
-        print("⚠️  No chunks to store!")
-        return
-    
-    print(f"\n🔄 Processing {len(chunks)} chunks...")
-    print("  - Generating embeddings with OpenAI")
-    print(f"  - Storing in {VECTOR_DB.upper()}")
     
     try:
-        vectorstore.add_documents(chunks)
-        print(f"\n✓ Successfully stored {len(chunks)} chunks with embeddings!")
+        # Try a test query to verify data exists
+        test_results = vectorstore.similarity_search("test", k=1)
+        
+        if not test_results:
+            print("\n❌ Vector store is EMPTY!")
+            print("\n📋 Solution:")
+            print("   1. Navigate to demo-09-rag-ingestion-pipeline")
+            print("   2. Run: uv run python main.py")
+            print("   3. This will ingest documents into the vector store")
+            print("   4. Then come back and run this demo")
+            return 0
+        
+        # Try to get a rough count
+        sample_results = vectorstore.similarity_search("document", k=100)
+        doc_count = len(sample_results)
+        
+        print(f"\n✓ Vector store has data!")
+        print(f"  - Found at least {doc_count} chunks")
+        print(f"  - Ready for retrieval demonstrations")
+        
+        # Show sample
+        if sample_results:
+            print(f"\n📄 Sample chunk:")
+            sample = sample_results[0]
+            print(f"  Source: {sample.metadata.get('source', 'Unknown')}")
+            preview = sample.page_content[:CHUNK_PREVIEW_LENGTH]
+            print(f"  Content: {preview}...")
+        
+        return doc_count
+        
     except Exception as e:
-        print(f"\n✗ Error storing chunks: {e}")
-        raise
+        print(f"\n⚠️  Error verifying vector store: {e}")
+        print("\nThis might mean:")
+        print("  1. Vector store is empty (run demo-09 first)")
+        print("  2. Wrong VECTOR_DB configuration in .env")
+        print("  3. Collection/index name mismatch")
+        return 0
 
 
 # ============================================================================
@@ -248,31 +185,120 @@ def store_chunks(chunks: List[Document]) -> None:
 # ============================================================================
 
 def similarity_search_basic(query: str, k: int = 3) -> List[Document]:
-    """Basic similarity search with k results."""
+    """Basic similarity search with k results and detailed content display."""
     print(f"\n[Retrieval] Similarity Search (k={k})")
     print(f"Query: \"{query}\"")
+    print("-" * 70)
     
     results = vectorstore.similarity_search(query, k=k)
     
-    print(f"✓ Retrieved {len(results)} documents")
+    print(f"\n✓ Retrieved {len(results)} documents\n")
+    
     for i, doc in enumerate(results, 1):
-        print(f"  [{i}] {doc.metadata.get('source', 'Unknown')[:50]}...")
+        print(f"  [{i}] Metadata:")
+        print(f"      Source: {doc.metadata.get('source', 'Unknown')}")
+        if 'page' in doc.metadata:
+            print(f"      Page: {doc.metadata['page']}")
+        
+        # Show chunk content (200 chars)
+        content_preview = doc.page_content[:CHUNK_PREVIEW_LENGTH]
+        content_preview = content_preview.replace('\n', ' ').replace('\r', ' ')
+        print(f"      Content: {content_preview}...")
+        print(f"      Length: {len(doc.page_content)} characters\n")
     
     return results
 
 
 def similarity_search_with_score(query: str, k: int = 3) -> List[tuple]:
-    """Similarity search with relevance scores."""
+    """Similarity search with relevance scores and detailed content.
+    
+    Note: Scores represent distance in vector space:
+    - Lower score = more similar = more relevant
+    - Higher score = less similar = less relevant
+    """
     print(f"\n[Retrieval] Similarity Search with Scores (k={k})")
     print(f"Query: \"{query}\"")
+    print("  (Lower score = Higher relevance)")
+    print("-" * 70)
     
     results = vectorstore.similarity_search_with_score(query, k=k)
     
-    print(f"✓ Retrieved {len(results)} documents with scores")
+    print(f"\n✓ Retrieved {len(results)} documents with scores\n")
+    
     for i, (doc, score) in enumerate(results, 1):
-        print(f"  [{i}] Score: {score:.4f} | {doc.metadata.get('source', 'Unknown')[:40]}...")
+        # Determine relevance level (distance-based: lower = more relevant)
+        if score > 0.8:
+            relevance = "🔴 Low relevance (far distance)"
+        elif score > 0.6:
+            relevance = "🟡 Medium relevance"
+        else:
+            relevance = "🟢 High relevance (close distance)"
+        
+        print(f"  [{i}] Score: {score:.4f} {relevance}")
+        print(f"      Source: {doc.metadata.get('source', 'Unknown')}")
+        if 'page' in doc.metadata:
+            print(f"      Page: {doc.metadata['page']}")
+        
+        # Show chunk content
+        content_preview = doc.page_content[:CHUNK_PREVIEW_LENGTH]
+        content_preview = content_preview.replace('\n', ' ').replace('\r', ' ')
+        print(f"      Content: {content_preview}...")
+        print(f"      Length: {len(doc.page_content)} characters\n")
     
     return results
+
+
+def metadata_filtering_search(query: str, filter_dict: dict, k: int = 3) -> List[Document]:
+    """Search with metadata filtering to limit results to specific sources/properties.
+    
+    Args:
+        query: Search query
+        filter_dict: Metadata filters e.g., {'source': 'specific_file.pdf'}
+        k: Number of results
+    """
+    print(f"\n[Retrieval] Metadata Filtering Search (k={k})")
+    print(f"Query: \"{query}\"")
+    print(f"Filter: {filter_dict}")
+    print("  (Only returns results matching metadata criteria)")
+    print("-" * 70)
+    
+    try:
+        # Different vector stores have different filtering syntax
+        if VECTOR_DB == "chromadb":
+            results = vectorstore.similarity_search(query, k=k, filter=filter_dict)
+        elif VECTOR_DB == "pinecone":
+            results = vectorstore.similarity_search(query, k=k, filter=filter_dict)
+        else:
+            results = vectorstore.similarity_search(query, k=k)
+            print("⚠️  Filtering not implemented for this vector store, showing all results")
+        
+        print(f"\n✓ Retrieved {len(results)} documents matching filter\n")
+        
+        if not results:
+            print("  ⚠️  No results found matching the filter criteria")
+            print("  Try: Adjusting the filter or checking available metadata")
+            return results
+        
+        for i, doc in enumerate(results, 1):
+            print(f"  [{i}] Metadata:")
+            for key, value in doc.metadata.items():
+                print(f"      {key}: {value}")
+            
+            # Show chunk content
+            content_preview = doc.page_content[:CHUNK_PREVIEW_LENGTH]
+            content_preview = content_preview.replace('\n', ' ').replace('\r', ' ')
+            print(f"      Content: {content_preview}...")
+            print(f"      Length: {len(doc.page_content)} characters\n")
+        
+        return results
+        
+    except Exception as e:
+        print(f"\n⚠️  Error during filtered search: {e}")
+        print("  This might be due to:")
+        print("  1. Unsupported filter format for this vector store")
+        print("  2. Metadata field doesn't exist")
+        print("  3. Filter syntax incompatibility")
+        return []
 
 
 def max_marginal_relevance_search(query: str, k: int = 3, fetch_k: int = 10) -> List[Document]:
@@ -283,6 +309,7 @@ def max_marginal_relevance_search(query: str, k: int = 3, fetch_k: int = 10) -> 
     print(f"\n[Retrieval] MMR Search (k={k}, fetch_k={fetch_k})")
     print(f"Query: \"{query}\"")
     print("  (Maximizes diversity while maintaining relevance)")
+    print("-" * 70)
     
     try:
         results = vectorstore.max_marginal_relevance_search(
@@ -291,13 +318,23 @@ def max_marginal_relevance_search(query: str, k: int = 3, fetch_k: int = 10) -> 
             fetch_k=fetch_k
         )
         
-        print(f"✓ Retrieved {len(results)} diverse documents")
+        print(f"\n✓ Retrieved {len(results)} diverse documents\n")
+        
         for i, doc in enumerate(results, 1):
-            print(f"  [{i}] {doc.metadata.get('source', 'Unknown')[:50]}...")
+            print(f"  [{i}] Metadata:")
+            print(f"      Source: {doc.metadata.get('source', 'Unknown')}")
+            if 'page' in doc.metadata:
+                print(f"      Page: {doc.metadata['page']}")
+            
+            # Show chunk content
+            content_preview = doc.page_content[:CHUNK_PREVIEW_LENGTH]
+            content_preview = content_preview.replace('\n', ' ').replace('\r', ' ')
+            print(f"      Content: {content_preview}...")
+            print(f"      Length: {len(doc.page_content)} characters\n")
         
         return results
     except Exception as e:
-        print(f"✗ MMR not supported: {e}")
+        print(f"\n✗ MMR not supported by this vector store: {e}")
         return []
 
 
@@ -305,6 +342,7 @@ def retriever_interface_demo(query: str):
     """Demonstrate using retriever interface with configuration."""
     print(f"\n[Retrieval] Using Retriever Interface")
     print(f"Query: \"{query}\"")
+    print("-" * 70)
     
     # Create retriever with specific configuration
     retriever = vectorstore.as_retriever(
@@ -314,9 +352,19 @@ def retriever_interface_demo(query: str):
     
     results = retriever.invoke(query)
     
-    print(f"✓ Retriever returned {len(results)} documents")
+    print(f"\n✓ Retriever returned {len(results)} documents\n")
+    
     for i, doc in enumerate(results, 1):
-        print(f"  [{i}] {doc.metadata.get('source', 'Unknown')[:50]}...")
+        print(f"  [{i}] Metadata:")
+        print(f"      Source: {doc.metadata.get('source', 'Unknown')}")
+        if 'page' in doc.metadata:
+            print(f"      Page: {doc.metadata['page']}")
+        
+        # Show chunk content
+        content_preview = doc.page_content[:CHUNK_PREVIEW_LENGTH]
+        content_preview = content_preview.replace('\n', ' ').replace('\r', ' ')
+        print(f"      Content: {content_preview}...")
+        print(f"      Length: {len(doc.page_content)} characters\n")
     
     return results
 
@@ -384,7 +432,7 @@ def analyze_retrieval_quality(query: str, k_values: List[int] = [1, 2, 3, 5]):
 def display_document_details(doc: Document, index: int = 1):
     """Display detailed information about a retrieved document."""
     print(f"\n{'=' * 70}")
-    print(f"DOCUMENT #{index} DETAILS")
+    print(f"DOCUMENT #{index} - DETAILED VIEW")
     print(f"{'=' * 70}")
     
     # Metadata
@@ -392,13 +440,24 @@ def display_document_details(doc: Document, index: int = 1):
     for key, value in doc.metadata.items():
         print(f"  {key}: {value}")
     
-    # Content
-    print("\n[Content]")
-    print(f"  Length: {len(doc.page_content)} characters")
-    print(f"  Preview (first 300 chars):")
-    print(f"  {doc.page_content[:300].replace(chr(10), ' ')}...")
+    # Content statistics
+    print("\n[Content Statistics]")
+    print(f"  Total length: {len(doc.page_content)} characters")
+    print(f"  Word count: {len(doc.page_content.split())} words")
+    print(f"  Line count: {len(doc.page_content.splitlines())} lines")
     
-    print(f"{'=' * 70}")
+    # Full content preview (first 400 chars for detailed view)
+    print("\n[Content Preview - First 400 characters]")
+    content_preview = doc.page_content[:400]
+    # Format for readability
+    lines = content_preview.split('\n')
+    for line in lines[:10]:  # Show up to 10 lines
+        if line.strip():
+            print(f"  {line}")
+    if len(doc.page_content) > 400:
+        print("  ...")
+    
+    print(f"\n{'=' * 70}")
 
 
 # ============================================================================
@@ -448,12 +507,36 @@ def demonstrate_retrieval_scenarios():
     query5 = "What are the guidelines?"
     analyze_retrieval_quality(query5, k_values=[1, 2, 3, 5])
     
-    # Scenario 6: Detailed document inspection
-    print("\n\n[Scenario 6] Detailed Document Inspection")
+    # Scenario 6: Metadata filtering
+    print("\n\n[Scenario 6] Metadata Filtering Search")
     print("-" * 70)
     
-    query6 = "employee benefits"
-    results = similarity_search_with_score(query6, k=2)
+    query6 = "What are the guidelines?"
+    # First, get a sample to see available metadata
+    sample = vectorstore.similarity_search(query6, k=1)
+    if sample and sample[0].metadata:
+        # Try to filter by source if available
+        source_value = sample[0].metadata.get('source')
+        if source_value:
+            print(f"\nFiltering by source: {source_value}")
+            metadata_filtering_search(query6, {'source': source_value}, k=3)
+        else:
+            print("\n⚠️  No 'source' metadata available for filtering")
+            print("Demonstrating concept with available metadata:")
+            # Try with any available metadata key
+            if sample[0].metadata:
+                key = list(sample[0].metadata.keys())[0]
+                value = sample[0].metadata[key]
+                metadata_filtering_search(query6, {key: value}, k=3)
+    else:
+        print("\n⚠️  No metadata available for filtering demonstration")
+    
+    # Scenario 7: Detailed document inspection
+    print("\n\n[Scenario 7] Detailed Document Inspection")
+    print("-" * 70)
+    
+    query7 = "employee benefits"
+    results = similarity_search_with_score(query7, k=2)
     
     if results:
         print("\nInspecting top result in detail:")
@@ -467,24 +550,23 @@ def main():
     """Run the complete demonstration."""
     print("\n" + "=" * 70)
     print("DEMO 10: RAG RETRIEVAL PIPELINE")
+    print("(Connect to Existing Vector Store & Demonstrate Retrieval)")
     print("=" * 70)
     
-    # Steps 1-3: Ingestion (Load, Chunk, Store)
-    documents = load_documents()
+    # Verify vector store has data
+    doc_count = verify_vector_store()
     
-    if not documents:
-        print("\n⚠️  No documents loaded. Please add documents to the Documents/ folder.")
+    if doc_count == 0:
+        print("\n" + "=" * 70)
+        print("❌ CANNOT PROCEED - VECTOR STORE IS EMPTY")
+        print("=" * 70)
         return
     
-    chunks = chunk_documents(documents)
+    # Demonstrate various retrieval scenarios
+    print("\n" + "=" * 70)
+    print("BEGINNING RETRIEVAL DEMONSTRATIONS")
+    print("=" * 70)
     
-    if not chunks:
-        print("\n⚠️  No chunks created.")
-        return
-    
-    store_chunks(chunks)
-    
-    # Step 4: Demonstrate various retrieval scenarios
     demonstrate_retrieval_scenarios()
     
     # Summary
@@ -492,22 +574,26 @@ def main():
     print("✅ RAG RETRIEVAL PIPELINE DEMONSTRATION FINISHED!")
     print("=" * 70)
     print("\n📋 Summary:")
-    print(f"  1. Loaded {len(documents)} documents")
-    print(f"  2. Created {len(chunks)} chunks")
-    print(f"  3. Stored chunks with embeddings in {VECTOR_DB.upper()}")
-    print(f"  4. Demonstrated 6 retrieval scenarios")
+    print(f"  1. Connected to existing {VECTOR_DB.upper()} vector store")
+    print(f"  2. Verified data exists (at least {doc_count} chunks)")
+    print(f"  3. Demonstrated 7 retrieval scenarios")
+    print(f"  4. Showed detailed chunk content (200 chars per result)")
     print("\n🎯 Retrieval Strategies Demonstrated:")
     print("  • Basic similarity search (different k values)")
-    print("  • Similarity search with relevance scores")
+    print("  • Similarity search with relevance scores (distance-based)")
     print("  • MMR search for diverse results")
     print("  • Retriever interface configuration")
     print("  • Retrieval quality analysis")
+    print("  • Metadata filtering (source-specific retrieval)")
     print("  • Detailed document inspection")
-    print("\n💡 Next Steps:")
-    print("  • For complete RAG with LLM generation, see demo-11")
-    print("  • Experiment with different queries")
-    print("  • Try different chunk sizes")
-    print("  • Add your own documents")
+    print("\n💡 Key Learnings:")
+    print("  • How similarity search finds relevant chunks")
+    print("  • What relevance scores indicate")
+    print("  • How k value affects retrieval quality")
+    print("  • When to use MMR for diversity")
+    print("\n📚 Related Demos:")
+    print("  • demo-09: RAG Ingestion (run this first to prepare data)")
+    print("  • demo-11: Complete RAG with LLM generation")
     print("=" * 70)
 
 

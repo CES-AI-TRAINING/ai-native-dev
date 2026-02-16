@@ -1,24 +1,33 @@
 # Quick Start - RAG Retrieval Pipeline
 
-Master RAG retrieval strategies in under 2 minutes!
+Master RAG retrieval strategies by connecting to an existing vector store in under 2 minutes!
 
 ## What You'll Learn
 
-How to retrieve the most relevant information from a vector database using:
+How to retrieve relevant information from an **EXISTING vector database** using various strategies:
 
 - Similarity search with different k values
-- Relevance scores
+- Relevance scores with visual indicators (🟢🟡🔴)
 - MMR for diverse results
 - Retriever interface
 - Quality analysis
 
-**Note**: This demo focuses on RETRIEVAL only. For complete RAG with LLM generation, see demo-11.
+**Prerequisites**: Run **demo-09-rag-ingestion-pipeline** first to populate the vector database!
+
+**Key Feature**: See 200 characters of content for each retrieved chunk!
+
+**Note**: This demo focuses on RETRIEVAL ONLY - no ingestion. For complete RAG with LLM generation, see demo-11.
 
 ## 60-Second Setup
 
 ```bash
-# 1. Navigate
-cd demo-10-rag-retrieval-pipeline
+# 0. FIRST: Run demo-09 to ingest documents
+cd ../demo-09-rag-ingestion-pipeline
+uv run python main.py
+# ✓ This populates the vector database
+
+# 1. Navigate to demo-10
+cd ../demo-10-rag-retrieval-pipeline
 
 # 2. Setup
 uv venv && source .venv/bin/activate
@@ -27,6 +36,7 @@ uv pip install -e .
 # 3. Configure
 cp .env.example .env
 # Edit .env: OPENAI_API_KEY=sk-your-key
+# Set VECTOR_DB=chromadb (or pinecone)
 
 # 4. Run!
 uv run python main.py
@@ -54,28 +64,34 @@ PINECONE_API_KEY=your-key
 ## What Happens
 
 ```
-1. Ingestion Phase
-   ├── Load documents (PDF, text, web)
-   ├── Chunk into 1000-char pieces
-   └── Store with embeddings
+1. Verification Phase
+   ├── Connect to existing vector store
+   ├── Verify data exists (guides to demo-09 if empty)
+   └── Show sample chunk with 200-char preview
 
-2. Retrieval Demonstrations (6 Scenarios)
+2. Retrieval Demonstrations (7 Scenarios)
    ├── [1] Different k values (k=2, 4, 6)
-   ├── [2] Relevance scores
+   ├── [2] Relevance scores with visual indicators (🟢🟡🔴)
    ├── [3] MMR for diversity
    ├── [4] Retriever interface
    ├── [5] Quality analysis
-   └── [6] Document inspection
+   ├── [6] Metadata filtering (source-specific retrieval)
+   └── [7] Document inspection with detailed content
 ```
 
 ## Understanding Output
 
-### Ingestion
+### Verification Phase
 
 ```
-✓ Loaded 8 documents
-✓ Created 127 chunks
-✓ Stored with embeddings in CHROMADB
+✓ Connecting to PINECONE vector store...
+✓ Vector store has data! Found at least 20 chunks
+
+Sample chunk:
+  Source: Documents/company_policy.pdf
+  Content (200 chars): Employee benefits include comprehensive health coverage,
+  401(k) matching up to 6%, flexible work arrangements, professional development
+  budget of $2000 annually...
 ```
 
 ### Retrieval Scenarios
@@ -84,48 +100,101 @@ PINECONE_API_KEY=your-key
 
 ```
 [k=2] Retrieved 2 documents
-  [1] Documents/company_policy.pdf
-  [2] Documents/guidelines.txt
+  [1] Metadata:
+        Source: Documents/company_policy.pdf
+        Page: 4
+      Content (200 chars): Employee benefits include comprehensive health coverage...
+      Length: 892 characters
+
+  [2] Metadata:
+        Source: Documents/guidelines.txt
+      Content (200 chars): All employees must follow the company code of conduct...
+      Length: 645 characters
 
 [k=4] Retrieved 4 documents
   (More results for broader coverage)
 ```
 
-**[2] Relevance Scores**
+**[2] Relevance Scores with Visual Indicators**
 
 ```
 ✓ Retrieved 3 documents with scores
-  [1] Score: 0.8542 | Very relevant
-  [2] Score: 0.7234 | Moderately relevant
-  [3] Score: 0.6891 | Less relevant
+  [1] 🟢 Score: 0.5842 | Metadata: company_policy.pdf, page 4
+      Content (200 chars): Employee benefits include comprehensive health coverage,
+      401(k) matching up to 6%, flexible work arrangements, professional development
+      budget of $2000 annually, paid time off...
+
+  [2] 🟡 Score: 0.7234 | Metadata: guidelines.txt
+      Content (200 chars): All employees must follow the company code of conduct which
+      includes respecting colleagues, maintaining confidentiality, and adhering to
+      professional standards at all times...
+
+  [3] 🔴 Score: 0.8891 | Metadata: policy.pdf, page 2
+      Content (200 chars): Remote work policy allows employees to work from home up to
+      three days per week with manager approval. Equipment and internet costs are
+      reimbursed according to the guidelines...
 ```
 
 **[3] MMR Search**
 
 ```
 ✓ Retrieved 4 diverse documents
-  (Avoids redundant similar results)
+  [1] Metadata: company_policy.pdf, page 4
+      Content (200 chars): Employee benefits include comprehensive...
+
+  [2] Metadata: guidelines.txt
+      Content (200 chars): All employees must follow the company...
+
+  (Avoids redundant similar results - shows diversity)
 ```
 
 **[4] Retriever Interface**
 
 ```
 ✓ Using standard LangChain retriever
-✓ Returns 4 documents
+✓ Retrieved 4 documents
+  [1] Content (200 chars): Employee benefits include comprehensive health coverage...
+  [2] Content (200 chars): All employees must follow the company code of conduct...
+  ...
 ```
 
 **[5] Quality Analysis**
 
 ```
 --- k=1 ---
-  Average score: 0.8542
+  Average score: 0.5842
+  Best single match
 
 --- k=3 ---
-  Average score: 0.7556
-  (More results = lower average relevance)
+  Average score: 0.6656
+  (More results = broader coverage, slightly higher average distance)
 ```
 
-**[6] Document Details**
+**[6] Metadata Filtering**
+
+```
+Query: "What are the guidelines?"
+Filter: {'source': 'Documents/guidelines.txt'}
+  (Only returns results matching metadata criteria)
+
+✓ Retrieved 3 documents matching filter
+
+  [1] Metadata:
+      source: Documents/guidelines.txt
+      Content (200 chars): All employees must follow established guidelines for 
+      code reviews, including mandatory peer review for all pull requests, automated
+      testing requirements, and documentation standards...
+      Length: 745 characters
+      
+  [2] Metadata:
+      source: Documents/guidelines.txt
+      Content (200 chars): Development guidelines require following PEP 8 for Python
+      code, using type hints for all function signatures, maintaining test coverage
+      above 80%, and writing clear commit messages...
+      Length: 612 characters
+```
+
+**[7] Document Details**
 
 ```
 ======================================
@@ -135,9 +204,17 @@ DOCUMENT #1 DETAILS
   source: company_policy.pdf
   page: 4
 
-[Content]
-  892 characters
-  Preview: Employee benefits include...
+[Full Content Preview - First 400 characters]
+  Employee benefits include comprehensive health coverage with medical, dental, and
+  vision insurance. The company matches 401(k) contributions up to 6% of salary.
+  Flexible work arrangements are available including remote work options up to 3 days
+  per week. Professional development budget of $2000 annually for courses, conferences,
+  and certifications. Paid time off starts at 15 days per year...
+
+[Statistics]
+  Total characters: 892
+  Word count: 156
+  Line count: 12
 ```
 
 ## Key Concepts (30 Seconds)
@@ -160,12 +237,13 @@ Number of results to retrieve.
 
 ### Relevance Score
 
-How similar is each result (0-1).
+How similar is each result (distance metric).
 
-- Lower score = More similar
-- 0.8+ = Very relevant
-- 0.6-0.8 = Moderately relevant
-- < 0.6 = Less relevant
+- **Lower score = More similar** (closer in vector space)
+- Visual indicators:
+  - 🟢 < 0.6 = Highly relevant
+  - 🟡 0.6-0.8 = Moderately relevant
+  - 🔴 > 0.8 = Less relevant
 
 ### MMR (Maximum Marginal Relevance)
 
