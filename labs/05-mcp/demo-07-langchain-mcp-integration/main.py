@@ -16,18 +16,46 @@ Key Concepts:
 
 import asyncio
 import os
+import sys
 from typing import Any, Optional, Type
 from dotenv import load_dotenv
 
-# LangChain imports
-from langchain.tools import BaseTool
-from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_openai_functions_agent
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from pydantic import BaseModel
-
-# FastMCP import
+# FastMCP import (always needed)
 from fastmcp import FastMCP
+
+# Check if running in server mode FIRST (before any LangChain imports)
+is_server_mode = len(sys.argv) > 1 and sys.argv[1] == "--server"
+
+# LangChain imports (only when NOT in server mode)
+if not is_server_mode:
+    try:
+        from langchain.tools import BaseTool
+        from langchain_openai import ChatOpenAI
+        from langchain.agents import AgentExecutor, create_openai_functions_agent
+        from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+        from pydantic import BaseModel
+    except ImportError as e:
+        print(f"⚠️  LangChain import error: {e}")
+        print("    Install with: uv sync")
+        print("    Or run in server mode: python main.py --server")
+        raise
+else:
+    # In server mode, define dummy classes so module can load
+    # These won't be used, but Python needs them for parsing
+    class BaseTool:
+        pass
+    class ChatOpenAI:
+        pass
+    class AgentExecutor:
+        pass
+    def create_openai_functions_agent(*args, **kwargs):
+        pass
+    class ChatPromptTemplate:
+        pass
+    class MessagesPlaceholder:
+        pass
+    class BaseModel:
+        pass
 
 # ============================================================================
 # CONFIGURATION
@@ -38,20 +66,22 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-if not OPENAI_API_KEY or OPENAI_API_KEY == "your-openai-api-key-here":
-    print("⚠️  WARNING: OPENAI_API_KEY not configured")
-    print("   This demo requires an OpenAI API key.")
-    print("   1. Get key from https://platform.openai.com/")
-    print("   2. Copy .env.example to .env")
-    print("   3. Add your key to .env")
-    print()
-    exit(1)
+# Only check API key when NOT in server mode
+if not is_server_mode:
+    if not OPENAI_API_KEY or OPENAI_API_KEY == "your-openai-api-key-here":
+        print("⚠️  WARNING: OPENAI_API_KEY not configured")
+        print("   This demo requires an OpenAI API key.")
+        print("   1. Get key from https://platform.openai.com/")
+        print("   2. Copy .env.example to .env")
+        print("   3. Add your key to .env")
+        print()
+        exit(1)
 
-print("=" * 70)
-print("MCP DEMO 07: LANGCHAIN INTEGRATION")
-print("=" * 70)
-print(f"✓ OpenAI Model: {OPENAI_MODEL}")
-print()
+    print("=" * 70)
+    print("MCP DEMO 07: LANGCHAIN INTEGRATION")
+    print("=" * 70)
+    print(f"✓ OpenAI Model: {OPENAI_MODEL}")
+    print()
 
 # ============================================================================
 # FASTMCP SERVER (Calculator tools)
@@ -327,4 +357,16 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if len(sys.argv) > 1 and sys.argv[1] == "--server":
+        # Run as MCP server only (for testing MCP protocol)
+        print("✓ LangChain MCP server starting...", file=sys.stderr)
+        print("✓ Server: Calculator Server", file=sys.stderr)
+        print("✓ Transport: stdio", file=sys.stderr)
+        print("✓ Tools: 4 calculator operations", file=sys.stderr)
+        print("✓ Ready for client connections", file=sys.stderr)
+        print("✓ Note: MCP tools only (not LangChain agent)", file=sys.stderr)
+        print(file=sys.stderr)
+        mcp.run()
+    else:
+        # Run LangChain demo (requires OPENAI_API_KEY)
+        asyncio.run(main())

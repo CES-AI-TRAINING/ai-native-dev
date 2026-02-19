@@ -8,3 +8,8 @@ dependencies = [
     "fastmcp>=0.1.0",
     "aiofiles>=23.0.0",
 ]
+
+[project.optional-dependencies]
+testing = [
+    "mcp>=1.0.0",  # Optional: for official MCP SDK client testing
+]

@@ -263,4 +263,21 @@ async def compare_weather(cities: List[str]) -> dict:
 # ============================================================================
 
 if __name__ == "__main__":
-    mcp.run()
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "--server":
+        # Run as MCP server
+        print("✓ Weather MCP server starting...")
+        print("✓ Server: Weather Server")
+        print("✓ Transport: stdio")
+        print("✓ Tools: 3 weather operations")
+        print("✓ Ready for client connections")
+        print()
+        mcp.run()
+    else:
+        # Run demo mode (direct server without protocol overhead)
+        print("⚠️  DEMO MODE: Running server directly")
+        print("    To test MCP protocol: uv run python test_client_fastmcp.py")
+        print("    To run as server: uv run python main.py --server")
+        print()
+        mcp.run()

@@ -11,3 +11,8 @@ dependencies = [
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",
 ]
+
+[project.optional-dependencies]
+testing = [
+    "mcp>=1.0.0",  # Optional: for official MCP SDK client testing
+]
