@@ -25,10 +25,8 @@ from fastmcp import FastMCP
 # This server will be discoverable by MCP clients (like Claude Desktop)
 mcp = FastMCP("demo-server")
 
-print("=" * 70)
-print("MCP DEMO 01: BASIC MCP SERVER")
-print("=" * 70)
-print()
+# Print statements suppressed to avoid interfering with JSON-RPC protocol
+# (See bottom of file for --server mode note)
 
 # ============================================================================
 # TOOL DEFINITIONS
@@ -48,9 +46,7 @@ def greet(name: str) -> str:
     Returns:
         A friendly greeting message
     """
-    print(f"[Server] Executing: greet(name='{name}')")
     greeting = f"Hello, {name}! Welcome to MCP (Model Context Protocol)!"
-    print(f"[Server] Returning: {greeting}")
     return greeting
 
 
@@ -64,7 +60,6 @@ def get_server_info() -> dict:
     Returns:
         Dictionary containing server information
     """
-    print("[Server] Executing: get_server_info()")
     info = {
         "name": "demo-server",
         "version": "1.0.0",
@@ -73,7 +68,6 @@ def get_server_info() -> dict:
         "tools_count": 2,
         "purpose": "Educational demo for learning MCP basics"
     }
-    print(f"[Server] Returning: {info}")
     return info
 
 
@@ -281,11 +275,8 @@ if __name__ == "__main__":
     
     if len(sys.argv) > 1 and sys.argv[1] == "--server":
         # Run as MCP server (for production use with Claude Desktop)
-        print("✓ Starting MCP server...")
-        print("✓ Server: demo-server")
-        print("✓ Transport: stdio")
-        print("✓ Ready for client connections")
-        print()
+        # NOTE: Print statements are suppressed here because stdout MUST contain
+        # ONLY JSON-RPC messages for the MCP protocol to work correctly.
         mcp.run()
     else:
         # Run demo mode (educational only - NO MCP protocol testing)
