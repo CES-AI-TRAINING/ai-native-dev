@@ -35,13 +35,6 @@ DEFAULT_UNITS = os.getenv("OPENWEATHER_UNITS", "metric")
 
 # Validation
 if not OPENWEATHER_API_KEY or OPENWEATHER_API_KEY == "your-api-key-here":
-    print("⚠️  WARNING: OPENWEATHER_API_KEY not configured")
-    print("   This demo will run but API calls will be simulated.")
-    print("   To use real weather data:")
-    print("   1. Get free API key from https://openweathermap.org/api")
-    print("   2. Copy .env.example to .env")
-    print("   3. Add your API key to .env")
-    print()
     DEMO_MODE = True
 else:
     DEMO_MODE = False
@@ -52,13 +45,7 @@ else:
 
 mcp = FastMCP("Weather Server")
 
-print("=" * 70)
-print("MCP DEMO 03: WEATHER API SERVER")
-print("=" * 70)
-print(f"✓ API Mode: {'DEMO (simulated data)' if DEMO_MODE else 'LIVE (real API)'}")
-print(f"✓ Base URL: {OPENWEATHER_BASE_URL}")
-print(f"✓ Default Units: {DEFAULT_UNITS}")
-print()
+# Print statements suppressed to avoid interfering with JSON-RPC protocol
 
 # ============================================================================
 # WEATHER TOOLS
@@ -77,8 +64,6 @@ async def get_weather(city: str, units: str = "metric") -> dict:
     Returns:
         Dictionary with weather information including temperature, description, humidity, wind speed
     """
-    print(f"[Server] Tool 'get_weather' called: city={city}, units={units}")
-    
     if DEMO_MODE:
         # Return simulated data for demo purposes
         return {
@@ -117,7 +102,6 @@ async def get_weather(city: str, units: str = "metric") -> dict:
                 "units": units
             }
             
-            print(f"[Server] Weather data retrieved: {data['name']}, {result['temperature']}°")
             return result
             
     except httpx.HTTPStatusError as e:
@@ -147,8 +131,6 @@ async def geocode(location: str) -> dict:
     Returns:
         Dictionary with name, latitude, longitude, and country
     """
-    print(f"[Server] Tool 'geocode' called: location={location}")
-    
     if DEMO_MODE:
         # Return simulated coordinates
         return {
@@ -183,7 +165,6 @@ async def geocode(location: str) -> dict:
                 "country": data[0]["country"]
             }
             
-            print(f"[Server] Coordinates found: {result['name']} ({result['latitude']}, {result['longitude']})")
             return result
             
     except httpx.HTTPStatusError as e:
@@ -205,8 +186,6 @@ async def compare_weather(cities: List[str]) -> dict:
     Returns:
         Dictionary with comparison data and warmest/coldest cities
     """
-    print(f"[Server] Tool 'compare_weather' called: cities={cities}")
-    
     if not cities or len(cities) == 0:
         return {"error": "No cities provided"}
     
@@ -254,7 +233,6 @@ async def compare_weather(cities: List[str]) -> dict:
         }
     }
     
-    print(f"[Server] Comparison complete: Warmest={warmest['city']}, Coldest={coldest['city']}")
     return result
 
 
@@ -267,17 +245,9 @@ if __name__ == "__main__":
     
     if len(sys.argv) > 1 and sys.argv[1] == "--server":
         # Run as MCP server
-        print("✓ Weather MCP server starting...")
-        print("✓ Server: Weather Server")
-        print("✓ Transport: stdio")
-        print("✓ Tools: 3 weather operations")
-        print("✓ Ready for client connections")
-        print()
+        # NOTE: Print statements are suppressed here because stdout MUST contain
+        # ONLY JSON-RPC messages for the MCP protocol to work correctly.
         mcp.run()
     else:
         # Run demo mode (direct server without protocol overhead)
-        print("⚠️  DEMO MODE: Running server directly")
-        print("    To test MCP protocol: uv run python test_client_fastmcp.py")
-        print("    To run as server: uv run python main.py --server")
-        print()
         mcp.run()
