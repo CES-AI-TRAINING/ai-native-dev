@@ -314,8 +314,17 @@ dependencies = [
     { name = "fastmcp" },
 ]
 
+[package.optional-dependencies]
+testing = [
+    { name = "mcp" },
+]
+
 [package.metadata]
-requires-dist = [{ name = "fastmcp", specifier = ">=0.1.0" }]
+requires-dist = [
+    { name = "fastmcp", specifier = ">=0.1.0" },
+    { name = "mcp", marker = "extra == 'testing'", specifier = ">=1.0.0" },
+]
+provides-extras = ["testing"]
 
 [[package]]
 name = "diskcache"

@@ -25,21 +25,50 @@ In this demo, you'll learn:
 uv sync
 ```
 
-### 2. Run the Server
+### 2. Choose Your Mode
+
+#### Option A: Educational Demo (Simplified)
+
+Run the educational demo:
 
 ```bash
 uv run python main.py
 ```
 
-### 3. Test with MCP Inspector
+**⚠️ Important:** This does NOT test MCP protocol - it calls tools directly for educational purposes.
+
+#### Option B: Test Actual MCP Protocol (Recommended)
+
+Test real MCP client-server communication:
+
+```bash
+uv run python test_client.py
+```
+
+**What this tests:**
+
+- ✓ Lists all 6 calculator tools via MCP
+- ✓ Calls each tool through JSON-RPC
+- ✓ Tests error handling (division by zero)
+- ✓ Verifies protocol behavior
+
+#### Option C: Run as Server
+
+Run as production server:
+
+```bash
+uv run python main.py --server
+```
+
+### 3. Test with MCP Inspector (Alternative)
 
 In another terminal:
 
 ```bash
-npx @modelcontextprotocol/inspector uv run python main.py
+npx @modelcontextprotocol/inspector uv run python main.py --server
 ```
 
-Visit http://localhost:5173 to interact with the calculator tools.
+Visit http://localhost:5173 to interact with the calculator tools via web UI.
 
 ## Architecture Overview 🏗️
 

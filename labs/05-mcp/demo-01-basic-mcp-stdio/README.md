@@ -28,21 +28,54 @@ Learn the fundamentals of Model Context Protocol (MCP) with FastMCP - a Pythonic
 uv sync
 ```
 
-### 2. Run the Demo
+### 2. Choose Your Mode
 
-The demo runs a server and client in the same process for demonstration:
+#### Option A: Educational Demo (Simplified)
+
+Run the educational demo that explains concepts without MCP protocol overhead:
 
 ```bash
 uv run python main.py
 ```
 
-You should see:
+**What this does:**
 
-- Server initialization
-- Client connection
-- Tool discovery
-- Tool invocation
-- Results displayed
+- Shows educational content about MCP
+- Calls tools directly (NOT through MCP protocol)
+- Demonstrates what tools do
+- No client-server communication
+
+**⚠️ Important:** This mode does NOT test actual MCP protocol communication. It's purely educational.
+
+#### Option B: Test Actual MCP Protocol (Recommended for Testing)
+
+Test the real MCP client-server communication:
+
+```bash
+uv run python test_client.py
+```
+
+**What this does:**
+
+- ✓ Starts MCP server as subprocess
+- ✓ Creates MCP client
+- ✓ Connects via stdio transport
+- ✓ Sends JSON-RPC messages
+- ✓ Discovers tools through `tools/list`
+- ✓ Calls tools through `tools/call`
+- ✓ Tests actual protocol behavior
+
+**This is the proper way to test your MCP server!**
+
+#### Option C: Run as Production Server
+
+Run as an MCP server for external clients (like Claude Desktop):
+
+```bash
+uv run python main.py --server
+```
+
+The server will wait for connections on stdin/stdout.
 
 ## 📚 How It Works
 
@@ -124,9 +157,85 @@ Every MCP tool has:
 demo-01-basic-mcp-stdio/
 ├── .python-version      # Python 3.12
 ├── .gitignore          # Python/UV ignores
-├── pyproject.toml      # Dependencies (fastmcp>=0.1.0)
+├── pyproject.toml      # Dependencies (fastmcp + mcp)
 ├── README.md           # This file
-└── main.py             # FastMCP server with demo mode
+├── main.py             # FastMCP server with demo mode
+└── test_client.py      # Proper MCP client test (NEW!)
+```
+
+## 🧪 Testing Your MCP Server
+
+### Understanding the Difference
+
+**❌ Demo Mode (`python main.py`)**
+
+- Calls helper functions directly
+- NO MCP protocol involved
+- Educational purposes only
+- Shows tool behavior without protocol overhead
+
+**✅ Protocol Test (`python test_client.py`)**
+
+- Real MCP client-server communication
+- Server runs as subprocess
+- Client connects via stdio
+- JSON-RPC messages exchanged
+- Tests actual MCP behavior
+
+### Running Protocol Tests
+
+```bash
+# Test with proper MCP client
+uv run python test_client.py
+```
+
+**What gets tested:**
+
+1. ✓ Server startup in subprocess
+2. ✓ Client connection via stdio
+3. ✓ Tool discovery (`tools/list` request)
+4. ✓ Tool invocation (`tools/call` request)
+5. ✓ JSON-RPC message format
+6. ✓ Result serialization/deserialization
+
+### Expected Output
+
+```
+╔════════════════════════════════════╗
+║         MCP CLIENT TEST            ║
+║    Testing Actual Protocol         ║
+╚════════════════════════════════════╝
+
+✓ Connected to MCP server
+
+TEST 1: List Available Tools
+---
+✓ Found 2 tools:
+  • greet
+  • get_server_info
+
+TEST 2: Call greet Tool
+---
+Calling: greet(name='Alice')
+✓ Result: Hello, Alice! Welcome to MCP...
+
+✨ All Tests Passed!
+```
+
+### Viewing JSON-RPC Messages
+
+To see the actual JSON-RPC messages, you can modify `test_client.py` to add logging or run with debug mode.
+
+### Writing Custom Tests
+
+You can extend `test_client.py` to add more test cases:
+
+```python
+async def test_custom(session: ClientSession):
+    """Your custom test."""
+    result = await session.call_tool("greet", arguments={"name": "Custom"})
+    assert "Custom" in result.content[0].text
+    print("✓ Custom test passed")
 ```
 
 ## 🔧 Troubleshooting

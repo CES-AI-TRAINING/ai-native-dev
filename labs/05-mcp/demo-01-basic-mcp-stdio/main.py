@@ -80,15 +80,20 @@ def get_server_info() -> dict:
 # ============================================================================
 # HELPER FUNCTIONS FOR DEMO (not MCP tools)
 # ============================================================================
+# ⚠️ IMPORTANT: These helper functions are used ONLY for educational demos.
+# They do NOT go through the MCP protocol - they're direct Python calls.
+# 
+# To test actual MCP protocol communication, use: uv run python test_client.py
+# ============================================================================
 
 def _demo_greet(name: str) -> str:
-    """Demo version of greet for testing."""
+    """Demo version of greet for educational purposes (NOT via MCP protocol)."""
     greeting = f"Hello, {name}! Welcome to MCP (Model Context Protocol)!"
     return greeting
 
 
 def _demo_get_server_info() -> dict:
-    """Demo version of get_server_info for testing."""
+    """Demo version of get_server_info for educational purposes (NOT via MCP protocol)."""
     return {
         "name": "demo-server",
         "version": "1.0.0",
@@ -283,14 +288,19 @@ if __name__ == "__main__":
         print()
         mcp.run()
     else:
-        # Run demo mode (educational)
+        # Run demo mode (educational only - NO MCP protocol testing)
+        print("⚠️  DEMO MODE: This shows tool behavior but does NOT test MCP protocol.")
+        print("    To test actual MCP communication, run: uv run python test_client.py")
+        print()
         demo_introduction()
         print()
         print("=" * 70)
-        print("🔧 TO RUN AS SERVER")
+        print("🔧 OTHER RUN MODES")
         print("=" * 70)
         print()
-        print("  uv run python main.py --server")
+        print("  Server Mode:  uv run python main.py --server")
+        print("  MCP Test:     uv run python test_client.py")
         print()
-        print("This will start the server and wait for client connections.")
+        print("  Server Mode: Starts server and waits for client connections")
+        print("  MCP Test:    Properly tests MCP protocol with client-server communication")
         print()
