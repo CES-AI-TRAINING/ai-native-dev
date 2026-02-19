@@ -22,10 +22,7 @@ from fastmcp import FastMCP
 
 mcp = FastMCP("calculator-server")
 
-print("=" * 70)
-print("MCP DEMO 02: CALCULATOR TOOLS")
-print("=" * 70)
-print()
+# Print statements suppressed to avoid interfering with JSON-RPC protocol
 
 # ============================================================================
 # CALCULATOR TOOLS
@@ -44,9 +41,7 @@ def add(a: float, b: float) -> float:
     Returns:
         Sum of a and b
     """
-    print(f"[Server] Executing: add({a}, {b})")
     result = a + b
-    print(f"[Server] Result: {result}")
     return result
 
 
@@ -62,9 +57,7 @@ def subtract(a: float, b: float) -> float:
     Returns:
         Difference (a - b)
     """
-    print(f"[Server] Executing: subtract({a}, {b})")
     result = a - b
-    print(f"[Server] Result: {result}")
     return result
 
 
@@ -80,9 +73,7 @@ def multiply(a: float, b: float) -> float:
     Returns:
         Product of a and b
     """
-    print(f"[Server] Executing: multiply({a}, {b})")
     result = a * b
-    print(f"[Server] Result: {result}")
     return result
 
 
@@ -101,15 +92,10 @@ def divide(a: float, b: float) -> float:
     Raises:
         ValueError: If b is zero
     """
-    print(f"[Server] Executing: divide({a}, {b})")
-    
     if b == 0:
-        error_msg = "Cannot divide by zero"
-        print(f"[Server] Error: {error_msg}")
-        raise ValueError(error_msg)
+        raise ValueError("Cannot divide by zero")
     
     result = a / b
-    print(f"[Server] Result: {result}")
     return result
 
 
@@ -125,9 +111,7 @@ def power(base: float, exponent: float) -> float:
     Returns:
         base raised to the power of exponent
     """
-    print(f"[Server] Executing: power({base}, {exponent})")
     result = base ** exponent
-    print(f"[Server] Result: {result}")
     return result
 
 
@@ -146,15 +130,10 @@ def modulo(a: float, b: float) -> float:
     Raises:
         ValueError: If b is zero
     """
-    print(f"[Server] Executing: modulo({a}, {b})")
-    
     if b == 0:
-        error_msg = "Cannot calculate modulo with zero divisor"
-        print(f"[Server] Error: {error_msg}")
-        raise ValueError(error_msg)
+        raise ValueError("Cannot calculate modulo with zero divisor")
     
     result = a % b
-    print(f"[Server] Result: {result}")
     return result
 
 
@@ -381,12 +360,8 @@ if __name__ == "__main__":
     
     if len(sys.argv) > 1 and sys.argv[1] == "--server":
         # Run as server only (for production use)
-        print("✓ Calculator server starting...")
-        print("✓ Server: calculator-server")
-        print("✓ Transport: stdio")
-        print("✓ Tools: 6 calculator operations")
-        print("✓ Ready for client connections")
-        print()
+        # NOTE: Print statements are suppressed here because stdout MUST contain
+        # ONLY JSON-RPC messages for the MCP protocol to work correctly.
         mcp.run()
     else:
         # Run demo (educational only - NO MCP protocol testing)
