@@ -20,7 +20,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain.agents import create_agent
 from langchain.tools import tool
 from langsmith import traceable
 
@@ -152,7 +152,7 @@ print()
 def get_word_count(text: str) -> int:
     """Return the number of words in the given text."""
     count = len(text.split())
-    print(f"   [Tool] get_word_count({text!r[:40]}…) = {count}")
+    print(f"   [Tool] get_word_count({repr(text)[:40]}…) = {count}")
     return count
 
 
@@ -167,24 +167,20 @@ def reverse_text(text: str) -> str:
 tools = [get_word_count, reverse_text]
 agent_llm = ChatOpenAI(model=MODEL, temperature=0)
 
-agent_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", "You are a helpful text processing assistant."),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ]
+agent = create_agent(
+    model=agent_llm,
+    tools=tools,
+    system_prompt="You are a helpful text processing assistant.",
 )
-
-agent = create_tool_calling_agent(agent_llm, tools, agent_prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
 
 task = (
     "Count the words in 'LangSmith makes AI observability effortless', "
     "then reverse those words."
 )
-agent_result = agent_executor.invoke({"input": task})
+agent_result = agent.invoke({"messages": [("human", task)]})
+output = agent_result["messages"][-1].content
 print(f"   Task: {task}")
-print(f"   Result: {agent_result['output']}")
+print(f"   Result: {output}")
 print()
 
 # ============================================================================
